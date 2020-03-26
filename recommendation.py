@@ -35,3 +35,40 @@ test_set = convert(test_set)
 
 training_set = torch.FloatTensor(training_set)
 test_set = torch.FloatTensor(test_set)
+
+# Architecture of AutoEncoder
+
+class SAE(nn.Module):
+    def __init__(self, ):
+        super(SAE, self).__init__()  
+        self.fc1 = nn.Linear(num_movies, 20)  
+        self.fc2 = nn.Linear(20, 10)
+        self.fc3 = nn.Linear(10, 20)
+        self.fc4 = nn.Linear(20, num_movies)  
+        self.activation = nn.Sigmoid()
+    def forward(self, x):
+        x = self.activation(self.fc1(x))      
+        x = self.activation(self.fc2(x))
+        x = self.activation(self.fc3(x))
+        x = self.fc4(x)
+        return x
+    
+sae = SAE()
+criterion = nn.MSELoss()
+optimizer = optim.RMSprop(sae.parameters(), lr = 0.01, weight_decay = 0.5)
+
+# Training SAE
+
+num_epoch = 200
+for eapoch in range(1, num_epoch+1):
+    train_loss =0
+    s = 0.
+    for user_id in range(num_users):
+        input = Variable(training_set[user_id]).unsqueeze(0)
+        target = input.clone()
+        if torch.sum(target.data > 0) > 0:
+            output = sae(input)
+            target.require_grad = False
+            output[target == 0] = 0 
+            loss = criterion(output, target)
+            mean_corrector = num_movies/float(torch.sum(target.data > 0) + 1e-10)
