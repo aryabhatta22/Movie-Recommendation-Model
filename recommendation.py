@@ -60,7 +60,7 @@ optimizer = optim.RMSprop(sae.parameters(), lr = 0.01, weight_decay = 0.5)
 # Training SAE
 
 num_epoch = 200
-for eapoch in range(1, num_epoch+1):
+for epoch in range(1, num_epoch+1):
     train_loss =0
     s = 0.
     for user_id in range(num_users):
@@ -72,3 +72,27 @@ for eapoch in range(1, num_epoch+1):
             output[target == 0] = 0 
             loss = criterion(output, target)
             mean_corrector = num_movies/float(torch.sum(target.data > 0) + 1e-10)
+            loss.backward()
+            train_loss += np.sqrt(loss.data*mean_corrector)
+            s += 1.
+            optimizer.step()
+    print('epoch: '+str(epoch)+' loss: '+str(train_loss/s))
+
+# a loss of 1 means our predicting rating has 1 star difference from user rating
+    
+# Testing SAE
+            
+test_loss =0
+s = 0.
+for user_id in range(num_users):
+    input = Variable(training_set[user_id]).unsqueeze(0)
+    target = Variable(test_set[user_id]).unsqueeze(0)
+    if torch.sum(target.data > 0) > 0:
+        output = sae(input)
+        target.require_grad = False
+        output[target == 0] = 0 
+        loss = criterion(output, target)
+        mean_corrector = num_movies/float(torch.sum(target.data > 0) + 1e-10)
+        test_loss += np.sqrt(loss.data*mean_corrector)
+        s += 1.
+print('test loss: '+str(test_loss/s))
